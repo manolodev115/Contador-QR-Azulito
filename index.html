@@ -7,23 +7,28 @@
 <script src="https://unpkg.com/html5-qrcode"></script>
 
 <style>
+
 body{
   text-align:center;
   font-family:Arial;
 }
+
 #reader{
   width:300px;
   margin:auto;
 }
+
 h1{
   font-size:50px;
 }
+
 </style>
 </head>
 
 <body>
 
 <h2>Escáner QR</h2>
+
 <div id="reader"></div>
 
 <h1>Contador: <span id="contador">0</span></h1>
@@ -33,6 +38,10 @@ h1{
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getDatabase, ref, onValue, runTransaction } 
 from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+/* ============================= */
+/* CONFIGURACIÓN FIREBASE */
+/* ============================= */
 
 const firebaseConfig = {
   apiKey: "AIzaSyAOB8Fbl8nZH27okIGu1EeHr67ZIAGHYhk",
@@ -46,38 +55,97 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
+
 const contadorRef = ref(db, "contador");
 
-// Mostrar contador en tiempo real
+/* ============================= */
+/* MOSTRAR CONTADOR EN TIEMPO REAL */
+/* ============================= */
+
 onValue(contadorRef, (snapshot) => {
+
   document.getElementById("contador").innerText = snapshot.val() || 0;
+
 });
 
-// Función para incrementar
+/* ============================= */
+/* INCREMENTAR CONTADOR */
+/* ============================= */
+
 function incrementarContador(){
+
   runTransaction(contadorRef, (current) => {
+
     return (current || 0) + 1;
+
   });
+
 }
 
-// Escáner QR
+/* ============================= */
+/* BLOQUEO ANTI DOBLE ESCANEO */
+/* ============================= */
+
+let bloqueoEscaneo = false;
+
+/* ============================= */
+/* ESCÁNER QR */
+/* ============================= */
+
 const html5QrCode = new Html5Qrcode("reader");
 
+/* BUSCAR CÁMARA TRASERA */
+
 Html5Qrcode.getCameras().then(devices => {
+
+  let camaraTrasera = devices.find(d => 
+    d.label.toLowerCase().includes("back") ||
+    d.label.toLowerCase().includes("rear")
+  );
+
+  camaraTrasera = camaraTrasera || devices[devices.length - 1];
+
   html5QrCode.start(
-    devices[0].id,
-    { fps: 10, qrbox: 250 },
+
+    camaraTrasera.id,
+
+    {
+      fps: 10,
+      qrbox: 250
+    },
+
     (decodedText) => {
 
+      /* SI ESTA BLOQUEADO IGNORA */
+
+      if(bloqueoEscaneo) return;
+
       if(decodedText === "CONTADOR QR AZULITO"){
+
         incrementarContador();
+
         alert("QR válido ✅");
-      } else {
+
+        /* ACTIVAR BLOQUEO */
+
+        bloqueoEscaneo = true;
+
+        setTimeout(()=>{
+          bloqueoEscaneo = false;
+        },5000); // 5 segundos
+
+      }
+
+      else{
+
         alert("QR no válido ❌");
+
       }
 
     }
+
   );
+
 });
 
 </script>
