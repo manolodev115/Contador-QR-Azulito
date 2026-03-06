@@ -55,7 +55,6 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
-
 const contadorRef = ref(db, "contador");
 
 /* ============================= */
@@ -87,6 +86,7 @@ function incrementarContador(){
 /* ============================= */
 
 let bloqueoEscaneo = false;
+let ultimoQR = null;
 
 /* ============================= */
 /* ESCÁNER QR */
@@ -94,59 +94,60 @@ let bloqueoEscaneo = false;
 
 const html5QrCode = new Html5Qrcode("reader");
 
-/* BUSCAR CÁMARA TRASERA */
+html5QrCode.start(
 
-Html5Qrcode.getCameras().then(devices => {
+  { facingMode: "environment" }, // fuerza cámara trasera
 
-  let camaraTrasera = devices.find(d => 
-    d.label.toLowerCase().includes("back") ||
-    d.label.toLowerCase().includes("rear")
-  );
+  {
+    fps: 10,
+    qrbox: 250
+  },
 
-  camaraTrasera = camaraTrasera || devices[devices.length - 1];
+  (decodedText) => {
 
-  html5QrCode.start(
+    /* SI ESTA BLOQUEADO IGNORA */
 
-    camaraTrasera.id,
+    if(bloqueoEscaneo) return;
 
-    {
-      fps: 10,
-      qrbox: 250
-    },
+    /* EVITA QUE EL MISMO QR SUME SI SE QUEDA EN CAMARA */
 
-    (decodedText) => {
+    if(decodedText === ultimoQR) return;
 
-      /* SI ESTA BLOQUEADO IGNORA */
+    ultimoQR = decodedText;
 
-      if(bloqueoEscaneo) return;
+    if(decodedText === "CONTADOR QR AZULITO"){
 
-      if(decodedText === "CONTADOR QR AZULITO"){
+      incrementarContador();
 
-        incrementarContador();
+      alert("QR válido ✅");
 
-        alert("QR válido ✅");
+      bloqueoEscaneo = true;
 
-        /* ACTIVAR BLOQUEO */
+      setTimeout(()=>{
 
-        bloqueoEscaneo = true;
+        bloqueoEscaneo = false;
+        ultimoQR = null;
 
-        setTimeout(()=>{
-          bloqueoEscaneo = false;
-        },5000); // 5 segundos
-
-      }
-
-      else{
-
-        alert("QR no válido ❌");
-
-      }
+      },5000);
 
     }
 
-  );
+    else{
 
-});
+      alert("QR no válido ❌");
+
+      bloqueoEscaneo = true;
+
+      setTimeout(()=>{
+        bloqueoEscaneo = false;
+        ultimoQR = null;
+      },5000);
+
+    }
+
+  }
+
+);
 
 </script>
 
