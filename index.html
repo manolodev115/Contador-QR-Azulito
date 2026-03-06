@@ -18,8 +18,10 @@ body{
   margin:auto;
 }
 
-h1{
-  font-size:50px;
+#estado{
+  font-size:22px;
+  margin-top:20px;
+  height:30px;
 }
 
 </style>
@@ -31,17 +33,15 @@ h1{
 
 <div id="reader"></div>
 
-<h1>Contador: <span id="contador">0</span></h1>
+<div id="estado"></div>
 
 <script type="module">
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getDatabase, ref, onValue, runTransaction } 
+import { getDatabase, ref, runTransaction } 
 from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-/* ============================= */
-/* CONFIGURACIÓN FIREBASE */
-/* ============================= */
+/* FIREBASE */
 
 const firebaseConfig = {
   apiKey: "AIzaSyAOB8Fbl8nZH27okIGu1EeHr67ZIAGHYhk",
@@ -57,91 +57,64 @@ const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 const contadorRef = ref(db, "contador");
 
-/* ============================= */
-/* MOSTRAR CONTADOR EN TIEMPO REAL */
-/* ============================= */
-
-onValue(contadorRef, (snapshot) => {
-
-  document.getElementById("contador").innerText = snapshot.val() || 0;
-
-});
-
-/* ============================= */
 /* INCREMENTAR CONTADOR */
-/* ============================= */
 
 function incrementarContador(){
-
-  runTransaction(contadorRef, (current) => {
-
+  runTransaction(contadorRef, (current)=>{
     return (current || 0) + 1;
-
   });
-
 }
 
-/* ============================= */
 /* BLOQUEO ANTI DOBLE ESCANEO */
-/* ============================= */
 
 let bloqueoEscaneo = false;
-let ultimoQR = null;
 
-/* ============================= */
-/* ESCÁNER QR */
-/* ============================= */
+/* ESCÁNER */
 
 const html5QrCode = new Html5Qrcode("reader");
 
 html5QrCode.start(
 
-  { facingMode: "environment" }, // fuerza cámara trasera
+  { facingMode: "environment" },
 
   {
-    fps: 10,
-    qrbox: 250
+    fps: 20,
+    qrbox: { width: 220, height: 220 }
   },
 
-  (decodedText) => {
-
-    /* SI ESTA BLOQUEADO IGNORA */
+  (decodedText)=>{
 
     if(bloqueoEscaneo) return;
-
-    /* EVITA QUE EL MISMO QR SUME SI SE QUEDA EN CAMARA */
-
-    if(decodedText === ultimoQR) return;
-
-    ultimoQR = decodedText;
 
     if(decodedText === "CONTADOR QR AZULITO"){
 
       incrementarContador();
 
-      alert("QR válido ✅");
+      document.getElementById("estado").innerText = "QR válido ✅";
+
+      if(navigator.vibrate){
+        navigator.vibrate(200);
+      }
 
       bloqueoEscaneo = true;
 
       setTimeout(()=>{
-
         bloqueoEscaneo = false;
-        ultimoQR = null;
-
+        document.getElementById("estado").innerText = "";
       },5000);
 
     }
 
     else{
 
-      alert("QR no válido ❌");
+      document.getElementById("estado").innerText = "QR no válido ❌";
 
       bloqueoEscaneo = true;
 
       setTimeout(()=>{
         bloqueoEscaneo = false;
-        ultimoQR = null;
-      },5000);
+        document.getElementById("estado").innerText = "";
+      },3000);
 
     }
 
